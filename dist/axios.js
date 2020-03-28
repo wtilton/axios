@@ -919,6 +919,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  xsrfHeaderName: 'X-XSRF-TOKEN',
 	
 	  maxContentLength: -1,
+	  maxBodyLength: -1,
 	
 	  validateStatus: function validateStatus(status) {
 	    return status >= 200 && status < 300;
@@ -1163,11 +1164,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	module.exports = function settle(resolve, reject, response) {
 	  var validateStatus = response.config.validateStatus;
-	  if (!validateStatus || validateStatus(response.status)) {
+	  if (!response.status || !validateStatus || validateStatus(response.status)) {
 	    resolve(response);
 	  } else {
+	    var result = '';
+	    for (var i in response) {
+	      if (response.hasOwnProperty(i)) {
+	        var cache = [];
+	        result += 'response.' + i + ' = ' + JSON.stringify(response[i], function (key, value) {
+	          if (typeof value === 'object' && value !== null) {
+	            if (cache.indexOf(value) !== -1) {
+	              // Duplicate reference found, discard key
+	              return;
+	            }
+	            // Store value in our collection
+	            cache.push(value);
+	          }
+	          return value;
+	        }) + '\n';
+	        cache = null;
+	      }
+	    }
 	    reject(createError(
-	      'Request failed with status code ' + response.status,
+	      'Request failed with status code ' + response.status + ' Other shit ' + result,
 	      response.config,
 	      null,
 	      response.request,
@@ -1227,7 +1246,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  error.response = response;
 	  error.isAxiosError = true;
 	
-	  error.toJSON = function() {
+	  error.toJSON = function toJSON() {
 	    return {
 	      // Standard
 	      message: this.message,
@@ -1528,14 +1547,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  config2 = config2 || {};
 	  var config = {};
 	
-	  var valueFromConfig2Keys = ['url', 'method', 'params', 'data'];
-	  var mergeDeepPropertiesKeys = ['headers', 'auth', 'proxy'];
+	  var valueFromConfig2Keys = ['url', 'method', 'data'];
+	  var mergeDeepPropertiesKeys = ['headers', 'auth', 'proxy', 'params'];
 	  var defaultToConfig2Keys = [
 	    'baseURL', 'url', 'transformRequest', 'transformResponse', 'paramsSerializer',
 	    'timeout', 'withCredentials', 'adapter', 'responseType', 'xsrfCookieName',
 	    'xsrfHeaderName', 'onUploadProgress', 'onDownloadProgress',
-	    'maxContentLength', 'validateStatus', 'maxRedirects', 'httpAgent',
-	    'httpsAgent', 'cancelToken', 'socketPath'
+	    'maxContentLength', 'maxBodyLength', 'validateStatus', 'maxRedirects', 'httpAgent',
+	    'httpsAgent', 'cancelToken', 'socketPath', 'responseEncoding'
 	  ];
 	
 	  utils.forEach(valueFromConfig2Keys, function valueFromConfig2(prop) {
